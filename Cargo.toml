@@ -1,0 +1,11 @@
+[package]
+name = "wgpu_shader_example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wgpu = "0.19.3"
+image = "0.24.9"
+anyhow = "1"
+bytemuck = "1.14.3"
+pollster = "0.3.0"
