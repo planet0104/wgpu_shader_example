@@ -1,7 +1,12 @@
 {
     "cSpell.words": [
+        "Bgra",
         "bytemuck",
+        "cpass",
+        "easu",
+        "mipmap",
         "Multisample",
+        "multisampled",
         "rpass",
         "unmap",
         "Unorm",

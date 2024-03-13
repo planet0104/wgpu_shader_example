@@ -8,6 +8,7 @@ mod yuv2rgb;
 
 fn main() -> Result<()> {
     // triangle::triangle()?;
-    grayscale::grayscale()?;
+    // grayscale::grayscale()?;
+    yuv2rgb::yuv2rgb()?;
     Ok(())
 }
