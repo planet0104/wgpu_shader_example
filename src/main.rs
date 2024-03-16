@@ -8,13 +8,21 @@ mod yuv2rgb;
 mod matrix1;
 mod matrix2;
 mod index;
+mod binary;
 
 fn main() -> Result<()> {
+    // 绘制三角形
     // triangle::triangle()?;
+    // 灰度图片
     // grayscale::grayscale()?;
+    // yuv转rgb
     // yuv2rgb::yuv2rgb()?;
+    // 矩阵计算
     // matrix1::main()?;
     // matrix2::main()?;
-    index::main()?;
+    // 填充索引
+    // index::main()?;
+    // 图像二值化
+    binary::main()?;
     Ok(())
 }
