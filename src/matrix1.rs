@@ -9,6 +9,7 @@ use wgpu::PipelineLayoutDescriptor;
 /// 矩阵计算
 /// 参考 https://developer.chrome.com/docs/capabilities/web-apis/gpu-compute?hl=zh-cn
 
+#[allow(dead_code)]
 pub fn main() -> Result<()>{
     let instance = wgpu::Instance::default();
     let adapter = instance

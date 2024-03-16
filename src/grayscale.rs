@@ -4,6 +4,7 @@ use pollster::FutureExt;
 
 use crate::utils::padded_bytes_per_row;
 
+#[allow(dead_code)]
 pub fn grayscale() -> Result<()>{
     let instance = wgpu::Instance::default();
     let adapter = instance

@@ -5,10 +5,8 @@ use pollster::FutureExt;
 use wgpu::util::BufferInitDescriptor;
 use wgpu::util::DeviceExt;
 
-/// 矩阵计算
-/// 参考 https://developer.chrome.com/docs/capabilities/web-apis/gpu-compute?hl=zh-cn
+/// 填充索引
 
-#[allow(dead_code)]
 pub fn main() -> Result<()>{
     let instance = wgpu::Instance::default();
     let adapter = instance
@@ -20,40 +18,25 @@ pub fn main() -> Result<()>{
         .request_device(&Default::default(), None)
         .block_on()?;
 
-    // 第一个矩阵
-    let first_matrix = &[
-        2f32 /* rows */, 4. /* columns */,
-        1., 2., 3., 4.,
-        5., 6., 7., 8.
-      ];
+    // 数组
+    let input_array = &mut [0f32; 100];
+    for (idx, x) in input_array.iter_mut().enumerate(){
+        *x = idx as f32;
+    }
+    println!("input_array:{:?}", input_array);
     
-    let first_matrix_buffer = device.create_buffer_init(&BufferInitDescriptor {
+    let input_buffer = device.create_buffer_init(&BufferInitDescriptor {
         label: None,
         usage: wgpu::BufferUsages::STORAGE,
-        contents: bytemuck::cast_slice(first_matrix),
+        contents: bytemuck::cast_slice(input_array),
     });
 
-    // 第二个矩阵
-    let second_matrix = &[
-        4f32 /* rows */, 2. /* columns */,
-        1., 2.,
-        3., 4.,
-        5., 6.,
-        7., 8.
-      ];
-    
-    let second_matrix_buffer = device.create_buffer_init(&BufferInitDescriptor {
-        label: None,
-        usage: wgpu::BufferUsages::STORAGE,
-        contents: bytemuck::cast_slice(second_matrix),
-    });
+    // 结果数组
+    let output_buffer_size = std::mem::size_of::<f32>() * input_array.len();
 
-    // 结果矩阵
-    let result_matrix_buffer_size = std::mem::size_of::<f32>() * (2 + first_matrix[0] as usize * second_matrix[1] as usize);
-
-    let result_matrix_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+    let output_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: None,
-        size: result_matrix_buffer_size as u64,
+        size: output_buffer_size as u64,
         usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
         mapped_at_creation: false,
     });
@@ -62,7 +45,7 @@ pub fn main() -> Result<()>{
 
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("compute_shader_module"),
-        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("../shaders/matrix.wgsl"))),
+        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("../shaders/index.wgsl"))),
     });
 
     // 流水线设置
@@ -78,16 +61,12 @@ pub fn main() -> Result<()>{
         entries: &[
             wgpu::BindGroupEntry {
                 binding: 0,
-                resource: first_matrix_buffer.as_entire_binding(),
+                resource: input_buffer.as_entire_binding(),
             },
             wgpu::BindGroupEntry {
                 binding: 1,
-                resource: second_matrix_buffer.as_entire_binding(),
-            },
-            wgpu::BindGroupEntry {
-                binding: 2,
-                resource: result_matrix_buffer.as_entire_binding(),
-            },
+                resource: output_buffer.as_entire_binding(),
+            }
         ],
         label: Some("bind_group"),
     });
@@ -104,23 +83,21 @@ pub fn main() -> Result<()>{
         let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default() );
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
-        let workgroup_count_x = (first_matrix[0] / 8.).ceil() as u32;
-        let workgroup_count_y = (second_matrix[1] / 8.).ceil() as u32;
-        cpass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
+        let workgroup_count_x = (input_array.len() as f32 / 8.).ceil() as u32;
+        println!("workgroup_count_x={workgroup_count_x}");
+        cpass.dispatch_workgroups(workgroup_count_x, 1, 1);
     }
 
     // 获取用于在未映射状态下读取的 GPU 缓冲区
-    // 创建一个 GPU 缓冲区作为目的地，以使用 copyBufferToBuffer 复制结果矩阵缓冲区。
-    // 最后，使用 copyEncoder.finish() 完成编码命令，然后使用 GPU 命令调用 device.queue.submit()，将这些命令提交到 GPU 设备队列。
     let gpu_read_buffer = device.create_buffer(&wgpu::BufferDescriptor {
         label: None,
-        size: result_matrix_buffer_size as u64,
+        size: output_buffer_size as u64,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
     });
 
     // 编码用于将缓冲区复制到缓冲区的命令。
-    encoder.copy_buffer_to_buffer(&result_matrix_buffer, 0, &gpu_read_buffer, 0, result_matrix_buffer_size as u64);
+    encoder.copy_buffer_to_buffer(&output_buffer, 0, &gpu_read_buffer, 0, output_buffer_size as u64);
 
     // Submit GPU commands.
     queue.submit(Some(encoder.finish()));
@@ -135,10 +112,8 @@ pub fn main() -> Result<()>{
     device.poll(wgpu::Maintain::Wait);
 
     let padded = buffer_slice.get_mapped_range();
-    let mut data: Vec<u8> = vec![0; result_matrix_buffer_size];
+    let mut data: Vec<u8> = vec![0; output_buffer_size];
     data.copy_from_slice(&padded);
-
-    println!("读取成功{:?}", data);
 
     let data:&[f32] = bytemuck::cast_slice(&padded[..]);
 

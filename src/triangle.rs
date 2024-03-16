@@ -8,6 +8,7 @@ use wgpu::VertexFormat;
 
 use crate::utils::padded_bytes_per_row;
 
+#[allow(dead_code)]
 pub fn triangle() -> Result<()>{
     let instance = wgpu::Instance::default();
     let adapter = instance
