@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::time::Instant;
 use anyhow::Ok;
 use anyhow::Result;
 use image::load_from_memory;
@@ -20,7 +21,7 @@ pub fn main() -> Result<()>{
         .block_on()?;
 
     // 输入图像
-    let input_image = load_from_memory(include_bytes!("../images/capture.jpg"))?.to_rgba8();
+    let input_image = load_from_memory(include_bytes!("../images/rust.png"))?.to_rgba8();
     let (width, height) = input_image.dimensions();
     println!("图像大小:{}x{}", width, height);
     
@@ -90,6 +91,7 @@ pub fn main() -> Result<()>{
     println!("shader 创建成功:{:?}", shader.global_id());
 
     // 命令提交
+    let t = Instant::now();
 
     queue.write_texture(
         input_texture.as_image_copy(),
@@ -110,8 +112,8 @@ pub fn main() -> Result<()>{
         let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default() );
         cpass.set_pipeline(&compute_pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
-        let workgroup_count_x = (width + 8 - 1) / 8;
-        let workgroup_count_y = (height + 8 - 1) / 8;
+        let workgroup_count_x = (width + 16 - 1) / 16;
+        let workgroup_count_y = (height + 16 - 1) / 16;
         println!("workgroup_count_x={workgroup_count_x}");
         println!("workgroup_count_y={workgroup_count_y}");
         cpass.dispatch_workgroups(workgroup_count_x, workgroup_count_y, 1);
@@ -168,6 +170,7 @@ pub fn main() -> Result<()>{
     {
         pixels.copy_from_slice(&padded[..unpadded_bytes_per_row]);
     }
+    println!("二值化耗时:{}ms", t.elapsed().as_millis());
 
     if let Some(output_image) =
         image::ImageBuffer::<image::Rgba<u8>, _>::from_raw(width, height, &pixels[..])

@@ -1,7 +1,7 @@
 @group(0) @binding(0) var input_texture : texture_2d<f32>;
 @group(0) @binding(1) var output_texture : texture_storage_2d<rgba8unorm, write>;
 
-@compute @workgroup_size(8,8)
+@compute @workgroup_size(16,16)
 fn main(@builtin(global_invocation_id) global_id : vec3u) {
     let dimensions = textureDimensions(input_texture);
     let coords = vec2<i32>(global_id.xy);
@@ -37,14 +37,35 @@ fn main(@builtin(global_invocation_id) global_id : vec3u) {
         B和H的输出，根据亮度计算,如果像素亮度超过阈值，B输出255，H输出-255，没有超过阈值，二者都输出0。
     */
 
-    let threshold = 100.;
+    let threshold = 0.19;
+    let val = vec3<f32>(0.299, 0.587, 0.114);
 
-    //当前细胞为双极细胞，计算双极细胞输出(双极细胞 -- 亮光兴奋，弱光抑制)
+    // >>>> 计算双极细胞输出 >>>>>
+    // (当前细胞为双极细胞 -- 亮光兴奋，弱光抑制)
     let bipolar_cell_color = textureLoad(input_texture, coords.xy, 0);
     var bipolar_cell_output = -1.;
-    if dot(vec3<f32>(0.299, 0.587, 0.114), bipolar_cell_color.rgb) >= threshold{
+    if dot(val, bipolar_cell_color.rgb) >= threshold{
         bipolar_cell_output = 1.;
     }
 
-    // textureStore(output_texture, coords.xy, vec4<f32>(gray, gray, gray, color.a));
+    // >>>> 计算右侧水平细胞输出(亮光抑制，弱光兴奋) >>>>
+    let right_horizontal_cell_color = textureLoad(input_texture, vec2<i32>(coords.x+1, coords.y), 0);
+    var right_horizontal_cell_output = 1.;
+    if dot(val, right_horizontal_cell_color.rgb) >= threshold{
+        right_horizontal_cell_output = -1.;
+    }
+
+    // >>>> 计算下边水平细胞输出(亮光抑制，弱光兴奋) >>>>
+    let bottom_horizontal_cell_color = textureLoad(input_texture, vec2<i32>(coords.x, coords.y+1), 0);
+    var bottom_horizontal_cell_output = 1.;
+    if dot(val, bottom_horizontal_cell_color.rgb) >= threshold{
+        bottom_horizontal_cell_output = -1.;
+    }
+
+    var output = 0.;
+    if bipolar_cell_output*2.0+right_horizontal_cell_output+bottom_horizontal_cell_output != 0.0{
+        output = 1.;
+    }
+    
+    textureStore(output_texture, coords.xy, vec4<f32>(output, output, output, 1.));
 }
