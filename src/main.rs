@@ -9,6 +9,7 @@ mod matrix1;
 mod matrix2;
 mod index;
 mod binary;
+mod rotate;
 
 fn main() -> Result<()> {
     // 绘制三角形
@@ -23,6 +24,8 @@ fn main() -> Result<()> {
     // 填充索引
     // index::main()?;
     // 图像二值化
-    binary::main()?;
+    // binary::main()?;
+    // 图像旋转
+    rotate::main()?;
     Ok(())
 }
