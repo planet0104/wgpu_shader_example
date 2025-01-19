@@ -1,6 +1,8 @@
 use anyhow::Ok;
 use anyhow::Result;
 use pollster::FutureExt;
+use wgpu::MemoryHints;
+use wgpu::PipelineCompilationOptions;
 
 use crate::utils::padded_bytes_per_row;
 
@@ -21,6 +23,7 @@ pub fn grayscale() -> Result<()>{
                 label: None,
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::downlevel_defaults(),
+                memory_hints: MemoryHints::default(),
             },
             None,)
         .block_on()?;
@@ -50,7 +53,7 @@ pub fn grayscale() -> Result<()>{
     queue.write_texture(
         input_texture.as_image_copy(),
         bytemuck::cast_slice(input_image.as_raw()),
-        wgpu::ImageDataLayout {
+        wgpu::TexelCopyBufferLayout {
             offset: 0,
             bytes_per_row: Some(4 * width),
             rows_per_image: None, // Doesn't need to be specified as we are writing a single image.
@@ -78,7 +81,9 @@ pub fn grayscale() -> Result<()>{
         label: Some("Grayscale pipeline"),
         layout: None,
         module: &shader,
-        entry_point: "main",
+        entry_point: Some("main"),
+        compilation_options: PipelineCompilationOptions::default(),
+        cache: None
     });
 
     let texture_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -129,15 +134,15 @@ pub fn grayscale() -> Result<()>{
     });
 
     encoder.copy_texture_to_buffer(
-        wgpu::ImageCopyTexture {
+        wgpu::TexelCopyTextureInfo {
             aspect: wgpu::TextureAspect::All,
             texture: &output_texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
         },
-        wgpu::ImageCopyBuffer {
+        wgpu::TexelCopyBufferInfo {
             buffer: &output_buffer,
-            layout: wgpu::ImageDataLayout {
+            layout: wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(padded_bytes_per_row as u32),
                 rows_per_image: Some(height),

@@ -13,7 +13,7 @@ mod rotate;
 
 fn main() -> Result<()> {
     // 绘制三角形
-    // triangle::triangle()?;
+    triangle::triangle()?;
     // 灰度图片
     // grayscale::grayscale()?;
     // yuv转rgb
@@ -26,6 +26,6 @@ fn main() -> Result<()> {
     // 图像二值化
     // binary::main()?;
     // 图像旋转
-    rotate::main()?;
+    // rotate::main()?;
     Ok(())
 }

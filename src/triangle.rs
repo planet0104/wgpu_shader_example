@@ -2,6 +2,7 @@ use anyhow::Ok;
 use image::EncodableLayout;
 use anyhow::Result;
 use pollster::FutureExt;
+use wgpu::PipelineCompilationOptions;
 use wgpu::VertexAttribute;
 use wgpu::VertexBufferLayout;
 use wgpu::VertexFormat;
@@ -54,7 +55,7 @@ pub fn triangle() -> Result<()>{
         source: wgpu::ShaderSource::Wgsl(include_str!("../shaders/triangle.wgsl").into()),
     });
 
-    println!("着色器(shader) 创建完成. {:?}", shader.global_id());
+    println!("着色器(shader) 创建完成. {:?}", shader);
 
     // 4: Create vertex buffer to contain vertex data
     let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -93,21 +94,24 @@ pub fn triangle() -> Result<()>{
         layout: Some(&pipeline_layout),
         vertex: wgpu::VertexState {
             module: &shader,
-            entry_point: "vertex_main",
+            entry_point: Some("vertex_main"),
             buffers: &[vertex_buffer_layout],
+            compilation_options: PipelineCompilationOptions::default()
         },
         fragment: Some(wgpu::FragmentState {
             module: &shader,
-            entry_point: "fragment_main",
+            entry_point: Some("fragment_main"),
             targets: &[Some(output_texture.format().into())],
+            compilation_options: PipelineCompilationOptions::default()
         }),
         primitive: wgpu::PrimitiveState::default(),
         depth_stencil: None,
         multisample: wgpu::MultisampleState::default(),
         multiview: None,
+        cache: None
     });
 
-    println!("渲染管线(pipeline) 创建完成. {:?}", render_pipeline.global_id());
+    println!("渲染管线(pipeline) 创建完成. {:?}", render_pipeline);
 
     let view = output_texture.create_view(&wgpu::TextureViewDescriptor::default());
     let mut encoder =
@@ -148,15 +152,15 @@ pub fn triangle() -> Result<()>{
     });
 
     encoder.copy_texture_to_buffer(
-        wgpu::ImageCopyTexture {
+        wgpu::TexelCopyTextureInfo {
             aspect: wgpu::TextureAspect::All,
             texture: &output_texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
         },
-        wgpu::ImageCopyBuffer {
+        wgpu::TexelCopyBufferInfo {
             buffer: &output_buffer,
-            layout: wgpu::ImageDataLayout {
+            layout: wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(padded_bytes_per_row as u32),
                 rows_per_image: Some(height),

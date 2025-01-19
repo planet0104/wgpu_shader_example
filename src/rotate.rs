@@ -8,6 +8,7 @@ use image::load_from_memory;
 use pollster::FutureExt;
 use wgpu::util::BufferInitDescriptor;
 use wgpu::util::DeviceExt;
+use wgpu::PipelineCompilationOptions;
 
 use crate::utils::padded_bytes_per_row;
 
@@ -92,7 +93,9 @@ pub fn main() -> Result<()>{
         label: Some("compute_pipeline"),
         layout: None,
         module: &shader,
-        entry_point: "main",
+        entry_point: Some("main"),
+        compilation_options: PipelineCompilationOptions::default(),
+        cache: None
     });
 
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -118,7 +121,7 @@ pub fn main() -> Result<()>{
         label: Some("bind_group"),
     });
 
-    println!("shader 创建成功:{:?}", shader.global_id());
+    println!("shader 创建成功:{:?}", shader);
 
     // 命令提交
     let t = Instant::now();
@@ -126,7 +129,7 @@ pub fn main() -> Result<()>{
     queue.write_texture(
         input_texture.as_image_copy(),
         bytemuck::cast_slice(input_image.as_raw()),
-        wgpu::ImageDataLayout {
+        wgpu::TexelCopyBufferLayout {
             offset: 0,
             bytes_per_row: Some(4 * width),
             rows_per_image: None, // Doesn't need to be specified as we are writing a single image.
@@ -162,15 +165,15 @@ pub fn main() -> Result<()>{
     });
 
     encoder.copy_texture_to_buffer(
-        wgpu::ImageCopyTexture {
+        wgpu::TexelCopyTextureInfo {
             aspect: wgpu::TextureAspect::All,
             texture: &output_texture,
             mip_level: 0,
             origin: wgpu::Origin3d::ZERO,
         },
-        wgpu::ImageCopyBuffer {
+        wgpu::TexelCopyBufferInfo {
             buffer: &output_buffer,
-            layout: wgpu::ImageDataLayout {
+            layout: wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(padded_bytes_per_row as u32),
                 rows_per_image: Some(output_height),

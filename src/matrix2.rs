@@ -4,6 +4,7 @@ use anyhow::Result;
 use pollster::FutureExt;
 use wgpu::util::BufferInitDescriptor;
 use wgpu::util::DeviceExt;
+use wgpu::PipelineCompilationOptions;
 
 /// 矩阵计算
 /// 参考 https://developer.chrome.com/docs/capabilities/web-apis/gpu-compute?hl=zh-cn
@@ -70,7 +71,9 @@ pub fn main() -> Result<()>{
         label: Some("compute_pipeline"),
         layout: None,
         module: &shader,
-        entry_point: "main",
+        entry_point: Some("main"),
+        compilation_options: PipelineCompilationOptions::default(),
+        cache: None
     });
 
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -92,7 +95,7 @@ pub fn main() -> Result<()>{
         label: Some("bind_group"),
     });
 
-    println!("shader 创建成功:{:?}", shader.global_id());
+    println!("shader 创建成功:{:?}", shader);
 
     // 命令提交
 

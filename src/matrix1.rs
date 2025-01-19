@@ -4,6 +4,7 @@ use anyhow::Result;
 use pollster::FutureExt;
 use wgpu::util::BufferInitDescriptor;
 use wgpu::util::DeviceExt;
+use wgpu::PipelineCompilationOptions;
 use wgpu::PipelineLayoutDescriptor;
 
 /// 矩阵计算
@@ -123,7 +124,7 @@ pub fn main() -> Result<()>{
         source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("../shaders/matrix.wgsl"))),
     });
 
-    println!("shader 创建成功:{:?}", shader.global_id());
+    println!("shader 创建成功:{:?}", shader);
 
     // 流水线设置
     let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -134,7 +135,9 @@ pub fn main() -> Result<()>{
             push_constant_ranges: &[],
         })),
         module: &shader,
-        entry_point: "main",
+        entry_point: Some("main"),
+        compilation_options: PipelineCompilationOptions::default(),
+        cache: None
     });
 
     // 命令提交

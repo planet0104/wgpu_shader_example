@@ -6,6 +6,8 @@ use std::time::Instant;
 use anyhow::Ok;
 use anyhow::Result;
 use pollster::FutureExt;
+use wgpu::MemoryHints;
+use wgpu::PipelineCompilationOptions;
 
 use crate::utils::padded_bytes_per_row;
 
@@ -53,6 +55,7 @@ pub fn yuv2rgb() -> Result<()> {
                 label: None,
                 required_features: wgpu::Features::ADDRESS_MODE_CLAMP_TO_BORDER,
                 required_limits: wgpu::Limits::downlevel_defaults(),
+                memory_hints: MemoryHints::default(),
             },
             None,
         )
@@ -125,7 +128,9 @@ pub fn yuv2rgb() -> Result<()> {
             label: Some("compute_shader_module"),
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("../shaders/yuv2rgb.wgsl"))),
         }),
-        entry_point: "main",
+        entry_point: Some("main"),
+        compilation_options: PipelineCompilationOptions::default(),
+        cache: None
     });
 
     //------------------------------------------------------
@@ -243,14 +248,14 @@ pub fn yuv2rgb() -> Result<()> {
         //------------------------------------------------------
 
         queue.write_texture(
-            wgpu::ImageCopyTextureBase {
+            wgpu::TexelCopyTextureInfo {
                 texture: &y_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             &y_data,
-            wgpu::ImageDataLayout {
+            wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(width as u32),
                 rows_per_image: Some(height as u32),
@@ -259,14 +264,14 @@ pub fn yuv2rgb() -> Result<()> {
         );
 
         queue.write_texture(
-            wgpu::ImageCopyTextureBase {
+            wgpu::TexelCopyTextureInfo {
                 texture: &u_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             &uv_data,
-            wgpu::ImageDataLayout {
+            wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(width as u32),
                 rows_per_image: Some(height as u32),
@@ -303,15 +308,15 @@ pub fn yuv2rgb() -> Result<()> {
         });
 
         encoder.copy_texture_to_buffer(
-            wgpu::ImageCopyTexture {
+            wgpu::TexelCopyTextureInfo {
                 aspect: wgpu::TextureAspect::All,
                 texture: &easu_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
-            wgpu::ImageCopyBuffer {
+            wgpu::TexelCopyBufferInfo {
                 buffer: &output_buffer,
-                layout: wgpu::ImageDataLayout {
+                layout: wgpu::TexelCopyBufferLayout {
                     offset: 0,
                     bytes_per_row: Some(padded_bytes_per_row as u32),
                     rows_per_image: Some(height),
